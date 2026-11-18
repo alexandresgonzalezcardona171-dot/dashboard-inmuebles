@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard de inmuebles</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f6f7f9;--card:#fff;--tx:#1b2430;--mut:#667085;--bd:#e2e6ec;--g:#1e9e63;--a:#e8a317;--r:#d6443b;--b:#2f6fdb;--p:#7a4fd1;--t:#14a3a3;--gs:#e4f5ec;--as:#fdf3dc;--rs:#fbe6e4}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161c;--card:#1b2129;--tx:#e8ecf1;--mut:#97a1b0;--bd:#2c3440;--g:#3cc88a;--a:#f2b93b;--r:#ef6a60;--b:#5b96f5;--p:#a283ef;--t:#3cc5c5;--gs:#173a2b;--as:#3d3115;--rs:#44201d}}
+:root[data-theme="dark"]{--bg:#12161c;--card:#1b2129;--tx:#e8ecf1;--mut:#97a1b0;--bd:#2c3440;--g:#3cc88a;--a:#f2b93b;--r:#ef6a60;--b:#5b96f5;--p:#a283ef;--t:#3cc5c5;--gs:#173a2b;--as:#3d3115;--rs:#44201d}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px}
+.w{max-width:1200px;margin:auto}
+h1{font-size:22px;margin:0}.sub{color:var(--mut);margin:2px 0 14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:12px}
+.filters label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px}
+select,input{background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:7px 9px;font:inherit}
+button{background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:7px 12px;cursor:pointer;font:inherit}
+button.on{background:var(--b);color:#fff;border-color:var(--b)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.k b{display:block;font-size:26px}.k span{color:var(--mut);font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;margin-bottom:12px}
+h2{font-size:14px;margin:0 0 10px}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0;cursor:pointer}
+.row .n{width:150px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .bar{flex:1;background:var(--bg);border-radius:6px;height:20px;overflow:hidden}
+.row .bar i{display:block;height:100%;border-radius:6px}
+.row .v{width:26px;text-align:right;font-weight:600}
+.row.off{opacity:.35}
+.leg{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0 0;font-size:12px;color:var(--mut)}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:900px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--bd);white-space:nowrap}
+th{cursor:pointer;color:var(--mut);font-size:12px;position:sticky;top:0;background:var(--card)}
+.badge{padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+#tip{position:fixed;pointer-events:none;background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:12px;display:none;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:9}
+.note{color:var(--mut);font-size:12px;margin-top:8px}
+</style></head><body><div class="w">
+<h1>Dashboard de inmuebles</h1>
+<p class="sub">Datos originales de <b>inmuebles_prueba.csv</b>, sin modificaciones. Los colores son solo una clasificación visual.</p>
+<div class="card filters">
+<label>Municipio<select id="fMun"></select></label>
+<label>Zona<select id="fZona"></select></label>
+<label>Estado (original)<select id="fEst"></select></label>
+<label>Precisión<select id="fPre"></select></label>
+<label>Área mín. <span id="aMinV"></span><input type="range" id="aMin"></label>
+<label>Buscar<input id="q" placeholder="ID, barrio, dirección…"></label>
+<button id="reset">Limpiar filtros</button>
+<label>Colorear por<span><button data-c="cat" class="on">Estado</button> <button data-c="zona">Zona</button> <button data-c="area">Área</button></span></label>
+</div>
+<div class="kpis" id="kpis"></div>
+<div class="grid">
+<div class="card"><h2>Inmuebles por estado (clic para filtrar)</h2><div id="bEst"></div><div class="leg" id="leg"></div></div>
+<div class="card"><h2>Inmuebles por zona</h2><div id="bZona"></div><h2 style="margin-top:14px">Área promedio por zona (m²)</h2><div id="bArea"></div></div>
+<div class="card"><h2>Ubicación (lat / lon)</h2><svg id="map" viewBox="0 0 400 300" style="width:100%;height:auto"></svg><div class="note">Posición relativa según las coordenadas del archivo. Pasa el cursor por un punto.</div></div>
+</div>
+<div class="card scroll"><h2>Detalle (<span id="cnt"></span> registros)</h2><table><thead id="th"></thead><tbody id="tb"></tbody></table></div>
+</div><div id="tip"></div>
+<script>
+const DATA=[{"id_inmueble": "INM-01", "id_anuncio": "fincaraiz:7387557", "origen": "extension_poligono.xlsx:El salvador:5", "direccion": "Cra 36A con Calle 41", "zona": "buenos_aires_el_salvador", "municipio": "medellin", "barrio": "El Salvador", "area_m2": 73, "estado": "Remodelar", "lat": "6.238961", "lon": "-75.560963", "precision_coordenadas": "cruce", "fuente_coordenadas": "OSM cruce Carrera 36A x Calle 41 (separación 0 m)"}, {"id_inmueble": "INM-02", "id_anuncio": "arrendamientos_santafe:V12132", "origen": "extension_poligono.xlsx:El salvador:6", "direccion": "Cra 38B # 40A-29", "zona": "buenos_aires_el_salvador", "municipio": "medellin", "barrio": "El Salvador", "area_m2": 57, "estado": "Remodelar", "lat": "6.23908", "lon": "-75.561813", "precision_coordenadas": "cruce", "fuente_coordenadas": "OSM cruce Carrera 38B x Calle 40A (separación 12 m)"}, {"id_inmueble": "INM-03", "id_anuncio": "arrendamientos_santafe:V10746", "origen": "extension_poligono.xlsx:El salvador:7", "direccion": "Cra 38A # 39-74", "zona": "buenos_aires_el_salvador", "municipio": "medellin", "barrio": "El Salvador", "area_m2": 73, "estado": "Remodelar", "lat": "6.237597", "lon": "-75.562759", "precision_coordenadas": "cruce", "fuente_coordenadas": "OSM cruce Carrera 38A x Calle 39 (separación 0 m)"}, {"id_inmueble": "INM-04", "id_anuncio": "fincaraiz:192814617", "origen": "extension_poligono.xlsx:El salvador:12", "direccion": "Calle 37 con Cra 33B", "zona": "buenos_aires_el_salvador", "municipio": "medellin", "barrio": "El Salvador", "area_m2": 71, "estado": "OK", "lat": "6.234861", "lon": "-75.560101", "precision_coordenadas": "cruce", "fuente_coordenadas": "OSM cruce Calle 37 x Carrera 33B (separación 0 m)"}, {"id_inmueble": "INM-05", "id_anuncio": "fincaraiz:193042067", "origen": "extension_poligono.xlsx:Bombona:6", "direccion": "", "zona": "buenos_aires_el_salvador", "municipio": "medellin", "barrio": "Bombona No1", "area_m2": 67, "estado": "Remodelar", "lat": "6.244064", "lon": "-75.56236", "precision_coordenadas": "barrio", "fuente_coordenadas": "OSM node/369456412 (Bomboná Numero 1)"}, {"id_inmueble": "INM-06", "id_anuncio": "fincaraiz:191578699", "origen": "factibilidad_castellana.xlsx:SECTORIAL:17", "direccion": "", "zona": "castellana_laureles", "municipio": "medellin", "barrio": "la castellana", "area_m2": 90, "estado": "REMODELADO", "lat": "6.240226", "lon": "-75.605418", "precision_coordenadas": "barrio", "fuente_coordenadas": "OSM node/405051001 (La Castellana)"}, {"id_inmueble": "INM-07", "id_anuncio": "fincaraiz:193331537", "origen": "factibilidad_castellana.xlsx:SECTORIAL:13", "direccion": "", "zona": "castellana_laureles", "municipio": "medellin", "barrio": "la castellana", "area_m2": 90, "estado": "HABITABLE POR REMODELAR", "lat": "6.240226", "lon": "-75.605418", "precision_coordenadas": "barrio", "fuente_coordenadas": "OSM node/405051001 (La Castellana)"}, {"id_inmueble": "INM-08", "id_anuncio": "fincaraiz:192780858", "origen": "factibilidad_castellana.xlsx:SECTORIAL:4", "direccion": "", "zona": "castellana_laureles", "municipio": "medellin", "barrio": "laureles", "area_m2": 92, "estado": "REMODELADO", "lat": "6.242", "lon": "-75.595833", "precision_coordenadas": "barrio", "fuente_coordenadas": "OSM node/375908075 (Laureles)"}, {"id_inmueble": "INM-09", "id_anuncio": "fincaraiz:192959138", "origen": "factibilidad_proyecto2.xlsx:SECTORIAL:5", "direccion": "", "zona": "ditaires_itagui", "municipio": "itagui", "barrio": "ditaires", "area_m2": 73, "estado": "REMODELADA", "lat": "6.168608", "lon": "-75.627492", "precision_coordenadas": "barrio", "fuente_coordenadas": "OSM way/553803506 (Parque Ditaires)"}, {"id_inmueble": "INM-10", "id_anuncio": "metrocuadrado:17017-M5712498", "origen": "factibilidad_proyecto2.xlsx:SECTORIAL:12", "direccion": "", "zona": "ditaires_itagui", "municipio": "itagui", "barrio": "ditaires", "area_m2": 64, "estado": "SIN REMODELAR (OBRA NEGRA)", "lat": "6.168608", "lon": "-75.627492", "precision_coordenadas": "barrio", "fuente_coordenadas": "OSM way/553803506 (Parque Ditaires)"}, {"id_inmueble": "INM-11", "id_anuncio": "ciencuadras:3073540", "origen": "factibilidad_proyecto2.xlsx:SECTORIAL:16", "direccion": "", "zona": "ditaires_itagui", "municipio": "itagui", "barrio": "ditaires", "area_m2": 63, "estado": "SIN REMODELAR (OBRA NEGRA)", "lat": "6.168608", "lon": "-75.627492", "precision_coordenadas": "barrio", "fuente_coordenadas": "OSM way/553803506 (Parque Ditaires)"}];
+const COLS=Object.keys(DATA[0]);
+const PAL=['--b','--p','--t','--a','--r','--g'];
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const norm=s=>s.toUpperCase();
+function cat(e){const u=norm(e);if(u.includes('OBRA NEGRA'))return{k:'Sin remodelar (obra negra)',c:'--r',s:'--rs'};
+ if(u.startsWith('REMODELAD')||u==='OK')return{k:'Remodelado / OK',c:'--g',s:'--gs'};
+ return{k:'Por remodelar',c:'--a',s:'--as'}}
+function areaC(a){return a<65?{k:'< 65 m²',c:'--b'}:a<=80?{k:'65–80 m²',c:'--t'}:{k:'> 80 m²',c:'--p'}}
+const zonas=[...new Set(DATA.map(d=>d.zona))];
+let mode='cat',sort={k:null,d:1};
+function color(d){if(mode==='cat')return cat(d.estado);if(mode==='area')return areaC(d.area_m2);return{k:d.zona,c:PAL[zonas.indexOf(d.zona)%PAL.length]}}
+const $=id=>document.getElementById(id);
+const uniq=k=>[...new Set(DATA.map(d=>d[k]))].sort();
+function fill(id,k){$(id).innerHTML='<option value="">Todos</option>'+uniq(k).map(v=>`<option>${v}</option>`).join('')}
+fill('fMun','municipio');fill('fZona','zona');fill('fEst','estado');fill('fPre','precision_coordenadas');
+const amin=Math.min(...DATA.map(d=>d.area_m2)),amax=Math.max(...DATA.map(d=>d.area_m2));
+$('aMin').min=amin;$('aMin').max=amax;$('aMin').value=amin;
+let catSel=null;
+function filtered(){const f={municipio:$('fMun').value,zona:$('fZona').value,estado:$('fEst').value,precision_coordenadas:$('fPre').value};const q=$('q').value.toLowerCase(),m=+$('aMin').value;
+ return DATA.filter(d=>Object.entries(f).every(([k,v])=>!v||d[k]===v)&&d.area_m2>=m&&(!catSel||cat(d.estado).k===catSel)&&(!q||Object.values(d).join(' ').toLowerCase().includes(q)))}
+function count(rows,fn){const m={};rows.forEach(r=>{const k=fn(r);m[k]=(m[k]||0)+1});return m}
+function bars(el,m,colorOf,click){const mx=Math.max(1,...Object.values(m));$(el).innerHTML=Object.entries(m).map(([k,v])=>`<div class="row ${click&&catSel&&catSel!==k?'off':''}" data-k="${k}"><div class="n" title="${k}">${k}</div><div class="bar"><i style="width:${v/mx*100}%;background:var(${colorOf(k)})"></i></div><div class="v">${Math.round(v*10)/10}</div></div>`).join('')||'<div class="note">Sin datos</div>';
+ if(click)$(el).querySelectorAll('.row').forEach(r=>r.onclick=()=>{catSel=catSel===r.dataset.k?null:r.dataset.k;render()})}
+const tip=$('tip');
+function render(){const rows=filtered();$('aMinV').textContent=$('aMin').value+' m²';
+ const tot=rows.reduce((s,d)=>s+d.area_m2,0),ok=rows.filter(d=>cat(d.estado).k==='Remodelado / OK').length;
+ $('kpis').innerHTML=[['Inmuebles',rows.length],['Área total (m²)',tot],['Área promedio (m²)',rows.length?(tot/rows.length).toFixed(1):'—'],['Remodelados / OK',rows.length?Math.round(ok/rows.length*100)+'%':'—'],['Zonas',new Set(rows.map(d=>d.zona)).size]].map(([l,v])=>`<div class="card k"><b>${v}</b><span>${l}</span></div>`).join('');
+ const cm={};['Remodelado / OK','Por remodelar','Sin remodelar (obra negra)'].forEach(k=>cm[k]=0);Object.assign(cm,count(rows,d=>cat(d.estado).k));
+ const cc={'Remodelado / OK':'--g','Por remodelar':'--a','Sin remodelar (obra negra)':'--r'};
+ bars('bEst',cm,k=>cc[k],true);
+ bars('bZona',count(rows,d=>d.zona),k=>PAL[zonas.indexOf(k)%PAL.length]);
+ const am={};zonas.forEach(z=>{const r=rows.filter(d=>d.zona===z);if(r.length)am[z]=r.reduce((s,d)=>s+d.area_m2,0)/r.length});
+ bars('bArea',am,k=>PAL[zonas.indexOf(k)%PAL.length]);
+ const lg={};rows.forEach(d=>{const c=color(d);lg[c.k]=c.c});
+ $('leg').innerHTML=Object.entries(lg).map(([k,c])=>`<span><i style="background:var(${c})"></i>${k}</span>`).join('');
+ // mapa
+ const lat=DATA.map(d=>+d.lat),lon=DATA.map(d=>+d.lon),x0=Math.min(...lon),x1=Math.max(...lon),y0=Math.min(...lat),y1=Math.max(...lat);
+ const px=v=>30+(v-x0)/(x1-x0||1)*340,py=v=>270-(v-y0)/(y1-y0||1)*240;
+ const pts={};rows.forEach(d=>{const k=d.lat+','+d.lon;(pts[k]=pts[k]||[]).push(d)});
+ $('map').innerHTML=`<rect x="1" y="1" width="398" height="298" rx="8" fill="none" stroke="var(--bd)"/>`+Object.values(pts).map((g,i)=>{const d=g[0],c=color(d).c;return `<g data-i="${i}"><circle cx="${px(+d.lon)}" cy="${py(+d.lat)}" r="${9+Math.min(g.length,4)*2}" fill="var(${c})" fill-opacity=".25"/><circle cx="${px(+d.lon)}" cy="${py(+d.lat)}" r="7" fill="var(${c})" stroke="var(--card)" stroke-width="2"/>${g.length>1?`<text x="${px(+d.lon)}" y="${py(+d.lat)+3.5}" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">${g.length}</text>`:''}</g>`}).join('');
+ const groups=Object.values(pts);
+ $('map').querySelectorAll('g').forEach(g=>{const gr=groups[+g.dataset.i];g.onmousemove=e=>{tip.style.display='block';tip.style.left=Math.min(e.clientX+12,innerWidth-250)+'px';tip.style.top=e.clientY+12+'px';tip.innerHTML=gr.map(d=>`<b>${d.id_inmueble}</b> · ${d.barrio}<br>${d.estado} · ${d.area_m2} m²`).join('<hr style="border:0;border-top:1px solid var(--bd)">')};g.onmouseleave=()=>tip.style.display='none'});
+ // tabla
+ let r2=[...rows];if(sort.k)r2.sort((a,b)=>(a[sort.k]>b[sort.k]?1:a[sort.k]<b[sort.k]?-1:0)*sort.d);
+ $('th').innerHTML='<tr>'+COLS.map(c=>`<th data-k="${c}">${c}${sort.k===c?(sort.d>0?' ▲':' ▼'):''}</th>`).join('')+'</tr>';
+ $('th').querySelectorAll('th').forEach(t=>t.onclick=()=>{sort={k:t.dataset.k,d:sort.k===t.dataset.k?-sort.d:1};render()});
+ $('tb').innerHTML=r2.map(d=>{const ct=cat(d.estado),c=color(d);return '<tr>'+COLS.map(k=>{let v=d[k];if(k==='estado')return `<td><span class="badge" style="background:var(${ct.s});color:var(${ct.c})">${v}</span></td>`;
+  if(k==='id_inmueble')return `<td><span class="dot" style="background:var(${c.c})"></span>${v}</td>`;
+  if(k==='area_m2')return `<td style="color:var(${areaC(+v).c});font-weight:600">${v}</td>`;
+  return `<td>${v===''?'<span style="color:var(--mut)">(vacío)</span>':v}</td>`}).join('')+'</tr>'}).join('');
+ $('cnt').textContent=rows.length}
+['fMun','fZona','fEst','fPre','aMin'].forEach(i=>$(i).oninput=()=>{catSel=null;render()});$('q').oninput=render;
+$('reset').onclick=()=>{['fMun','fZona','fEst','fPre','q'].forEach(i=>$(i).value='');$('aMin').value=amin;catSel=null;render()};
+document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{mode=b.dataset.c;document.querySelectorAll('[data-c]').forEach(x=>x.classList.toggle('on',x===b));render()});
+render();
+</script></body></html>
